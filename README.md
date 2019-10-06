@@ -1,5 +1,7 @@
 # Taxi Map Booking
 
+# Google Maps
+
 A web page for booking a taxi with some feature to display the route on the map with ability to setup waypoints.
 
 ![Taxi Map Booking - google maps - js](screenshot1.png)
