@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Map</title>
+		<meta http-equiv="content-type" content="text/html; charset=UTF-8"/>
+		<!-- <script type="text/javascript" src="http://maps.google.com/maps/api/js?key=*********"></script> -->
+	</head>
+	<body>
+		<form action="submit.php" method="POST">
+			Start: <input oninput="locationCheck();" onkeypress="locationCheck();" onkeydown="locationCheck();" onkeyup="locationCheck();" onchange="locationCheck();" onFocus="locationCheck();" id="input-location-start" type="text" name="start">
+			<br>
+			Stop On: <input oninput="locationCheck();" onkeypress="locationCheck();" onkeydown="locationCheck();" onkeyup="locationCheck();" onchange="locationCheck();" onFocus="locationCheck();" id="input-location-stop" type="text" name="stop">
+			<br>
+			End: <input oninput="locationCheck();" onkeypress="locationCheck();" onkeydown="locationCheck();" onkeyup="locationCheck();" onchange="locationCheck();" onFocus="locationCheck();" id="input-location-end" type="text" name="end">
+			<br>
+			For Hours: <select oninput="locationCheck();" onchange="locationCheck();" name="hours" id="input-location-time-hours" class="form-control ftn ftn4">
+				<option value="">Tid&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</option>
+				<option value="0">00</option>
+				<option value="01">01</option>  <option value="02">02</option>  <option value="03">03</option>  <option value="04">04</option>  <option value="05">05</option>  <option value="06">06</option>  <option value="07">07</option>  <option value="08">08</option>  <option value="09">09</option>  <option value="10">10</option>  <option value="11">11</option>  <option value="12">12</option>  <option value="13">13</option>  <option value="14">14</option>  <option value="15">15</option>  <option value="16">16</option>  <option value="17">17</option>  <option value="18">18</option>  <option value="19">19</option>  <option value="20">20</option>  <option value="21">21</option>  <option value="22">22</option>  <option value="23">23</option>
+			</select>
+			<div id="map" style="width: 400px; height: 300px;"></div>
+			<div>Duration: <label id="output-location-distance">0</label>m</div>
+			<div>Distance: <label id="output-location-duration">0</label>s</div>
+			<div>Price1: <label id="output-location-price1">0</label> USD</div>
+			<div>Price2: <label id="output-location-price2">0</label> USD</div>
+			Car Wanted: <select name="car">
+				<option value="2">normal car</option>
+				<option value="1">vip car</option>
+			</select>
+			<br>
+			Hidden Fields: 
+			<input type="text" id="value-location-distance" name="distance">
+			<input type="text" id="value-location-duration" name="duration">
+			<input type="text" id="value-location-price1" name="price1">
+			<input type="text" id="value-location-price2" name="price2">
+			<br>
+			<button name="submit">SUBMIT</button>
+		</form>
+		<script type="text/javascript">
+		var directionsService=null;
+		var directionsDisplay=null;
+		var myOptions={};
+		function initLoad() {
+			directionsService=new google.maps.DirectionsService();
+			directionsDisplay=new google.maps.DirectionsRenderer();
+			let input_start=document.querySelector("#input-location-start");
+			let input_end=document.querySelector("#input-location-end");
+			let input_stop=document.querySelector("#input-location-stop");
+			let auto_start=new google.maps.places.Autocomplete(input_start);
+			let auto_end=new google.maps.places.Autocomplete(input_end);
+			let auto_stop=new google.maps.places.Autocomplete(input_stop);
+			auto_start.setComponentRestrictions({'country': ['us']});
+			auto_end.setComponentRestrictions({'country': ['us']});
+			auto_stop.setComponentRestrictions({'country': ['us']});
+			myOptions={
+				zoom:7,
+				center: {
+					lat: 58.5823294,
+					lng: 15.3165662
+				},
+				mapTypeId: google.maps.MapTypeId.ROADMAP,
+			}
+			locationCheck();
+		}
+		var price_cars=[];
+		var price_cars_fix_less=[[], []];
+		//////////////////////////////
+		price_cars[0]=13;
+		price_cars[1]=11;
+		//////////////////////////////
+		price_cars_fix_less[0][0]=120;
+		price_cars_fix_less[0][1]=130;
+		price_cars_fix_less[1][0]=99;
+		price_cars_fix_less[1][1]=110;
+		//////////////////////////////
+		function locationCheck() {
+			if(directionsService == null) {
+				return;
+			}
+			let input_start=document.querySelector("#input-location-start");
+			let input_end=document.querySelector("#input-location-end");
+			let input_stop=document.querySelector("#input-location-stop");
+			let input_time_hours=document.querySelector("#input-location-time-hours");
+			let currentTime=parseInt(input_time_hours.value);
+			let output_distance=document.querySelector("#output-location-distance");
+			let output_duration=document.querySelector("#output-location-duration");
+			let output_price1=document.querySelector("#output-location-price1");
+			let output_price2=document.querySelector("#output-location-price2");
+			let input_distance=document.querySelector("#value-location-distance");
+			let input_duration=document.querySelector("#value-location-duration");
+			let input_price1=document.querySelector("#value-location-price1");
+			let input_price2=document.querySelector("#value-location-price2");
+			var map=new google.maps.Map(document.getElementById("map"), myOptions);
+			let duration=0;
+			directionsDisplay.setMap(map);
+			var waypoints=[];
+			if(input_stop.value != "") {
+				waypoints=[
+					{location: input_stop.value, stopover: false},
+				];
+			}
+			var request={
+				origin: input_start.value, 
+				destination: input_end.value,
+				travelMode: google.maps.DirectionsTravelMode.DRIVING,
+				waypoints: waypoints,
+			};
+			directionsService.route(request, function(response, status) {
+				if (status == google.maps.DirectionsStatus.OK) {
+					distance=response.routes[0].legs[0].distance.value;
+					duration=response.routes[0].legs[0].duration.value;
+					//////////////////////////////////////////////////
+					let finalPrice=[0, 0];
+					for(let index=0;index<=1;index++) {
+						finalPrice[index]=Math.ceil(price_cars[index] * (distance/1000));
+						if((distance/1000) > 1.5) {
+							if(Number.isNaN(currentTime) || currentTime < 18 && currentTime > 8) {
+								// good time
+								finalPrice[index]+=Math.ceil((duration/60) * 9);
+							} else {
+								// bad time
+								finalPrice[index]+=Math.ceil((duration/60) * 11);
+							}
+							if(index == 0) {
+								finalPrice[index]+=70;
+							}
+							else if(index == 1) {
+								finalPrice[index]+=40;
+							}
+						}
+						else if((distance/1000) <= 1.5) {
+							if(Number.isNaN(currentTime) || currentTime < 18 && currentTime > 8) {
+								// good time
+								finalPrice[index]=price_cars_fix_less[index][0];
+							} else {
+								// bad time
+								finalPrice[index]=price_cars_fix_less[index][1];
+							}
+						}
+					}
+					//////////////////////////////////////////////////
+					output_distance.innerHTML=distance;
+					output_duration.innerHTML=duration;
+					output_price1.innerHTML=finalPrice[0];
+					output_price2.innerHTML=finalPrice[1];
+					//////////////////////////////////////////////////
+					input_distance.value=distance;
+					input_duration.value=duration;
+					input_price1.value=finalPrice[0];
+					input_price2.value=finalPrice[1];
+					//////////////////////////////////////////////////
+					directionsDisplay.setDirections(response);
+				}
+			});
+		}
+		</script>
+		<script src="https://maps.googleapis.com/maps/api/js?key=**************&libraries=places&callback=initLoad" async defer></script>
+	</body>
+</html>
